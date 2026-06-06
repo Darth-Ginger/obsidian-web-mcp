@@ -7,6 +7,7 @@ Designed to run behind Cloudflare Tunnel for secure remote access.
 import json
 import logging
 import sys
+import os
 from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
