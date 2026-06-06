@@ -31,6 +31,8 @@ async def lifespan(server):
     frontmatter_index.stop()
     logger.info("Vault MCP server shut down.")
 
+# Read allowed hosts from env so the fork stays portable
+_extra_hosts = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
 
 # Create the MCP server
 mcp = FastMCP(
@@ -41,12 +43,15 @@ mcp = FastMCP(
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=[
-            "127.0.0.1:*",
+            "localhost",
             "localhost:*",
-            "[::1]:*",
-            # Add your tunnel hostname here, e.g.:
-            # "vault-mcp.example.com",
-        ],
+            "127.0.0.1",
+            "127.0.0.1:*",
+        ] + _extra_hosts,
+        allowed_origins=[
+            "http://localhost:*",
+            "https://localhost:*",
+        ] + [f"https://{h}" for h in _extra_hosts],
     ),
 )
 
