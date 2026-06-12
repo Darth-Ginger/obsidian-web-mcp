@@ -38,7 +38,7 @@ _extra_hosts = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(","
 # Create the MCP server
 mcp = FastMCP(
     "obsidian_web_mcp",
-    stateless_http=True,
+    stateless_http=False,
     json_response=True,
     lifespan=lifespan,
     transport_security=TransportSecuritySettings(
