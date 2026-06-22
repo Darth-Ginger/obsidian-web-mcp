@@ -84,10 +84,21 @@ def write_file_atomic(
         path.parent.mkdir(parents=True, exist_ok=True)
 
     # Write to a temp file in the same directory, then atomic-replace.
+    # tempfile.mkstemp() creates the file with restrictive 0o600 permissions;
+    # carrying those into the vault leaves notes unreadable to other processes
+    # (e.g. the Obsidian desktop app). Restore sensible permissions before the
+    # atomic replace: preserve the target's existing mode when overwriting, or
+    # apply the standard 0o666 minus the process umask for new files.
     fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(encoded)
+        if is_new:
+            umask = os.umask(0)
+            os.umask(umask)
+            os.chmod(tmp_path, 0o666 & ~umask)
+        else:
+            os.chmod(tmp_path, os.stat(path).st_mode & 0o777)
         os.replace(tmp_path, path)
     except BaseException:
         # Clean up the temp file on any failure
