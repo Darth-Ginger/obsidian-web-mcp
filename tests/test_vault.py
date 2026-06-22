@@ -1,5 +1,8 @@
 """Tests for vault.py -- path resolution, file operations, and safety checks."""
 
+import os
+import stat
+
 import pytest
 from pathlib import Path
 
@@ -68,6 +71,26 @@ def test_write_atomic_overwrite(vault_dir):
     is_new, _ = write_file_atomic("test-note.md", "Overwritten content.")
     assert is_new is False
     assert (vault_dir / "test-note.md").read_text() == "Overwritten content."
+
+
+def test_write_atomic_new_file_respects_umask(vault_dir):
+    """New files get umask-respecting permissions, not the 0o600 mkstemp default."""
+    old_umask = os.umask(0o022)
+    try:
+        write_file_atomic("perm-new.md", "content")
+        mode = stat.S_IMODE((vault_dir / "perm-new.md").stat().st_mode)
+        assert mode == 0o644
+    finally:
+        os.umask(old_umask)
+
+
+def test_write_atomic_overwrite_preserves_permissions(vault_dir):
+    """Overwriting an existing file keeps its original permissions."""
+    target = vault_dir / "test-note.md"
+    target.chmod(0o664)
+    write_file_atomic("test-note.md", "new content")
+    mode = stat.S_IMODE(target.stat().st_mode)
+    assert mode == 0o664
 
 
 def test_write_atomic_creates_dirs(vault_dir):
